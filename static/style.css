@@ -1,0 +1,420 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --rood: #c0291e;
+  --rood-hover: #a02215;
+  --navy: #1a2d4f;
+  --navy-licht: #243660;
+  --blauw-link: #2e75b6;
+  --grijs: #f4f4f4;
+  --grijs-mid: #e8e8e8;
+  --grijs-donker: #6b7280;
+  --tekst: #1a1a1a;
+  --border: #dcdcdc;
+  --wit: #ffffff;
+  --radius: 4px;
+  --widget-breedte: 370px;
+  --widget-hoogte: 620px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f0f0f0;
+  min-height: 100vh;
+}
+
+/* ── Chat widget container ── */
+.chat-widget {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  z-index: 1000;
+}
+
+/* ── Trigger knop ── */
+.chat-knop {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--rood);
+  color: var(--wit);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(192, 41, 30, 0.45);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.chat-knop:hover {
+  background: var(--rood-hover);
+  transform: scale(1.06);
+}
+
+.chat-knop .icoon-sluiten { display: none; }
+.chat-knop.open .icoon-chat { display: none; }
+.chat-knop.open .icoon-sluiten { display: block; }
+
+/* ── Popup venster ── */
+.chat-popup {
+  width: var(--widget-breedte);
+  height: var(--widget-hoogte);
+  background: var(--wit);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+
+  opacity: 0;
+  transform: translateY(14px) scale(0.98);
+  pointer-events: none;
+  transform-origin: bottom right;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.chat-popup.zichtbaar {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
+}
+
+/* ── Popup header — navy zoals Metesco topbalk ── */
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  background: var(--navy);
+  color: var(--wit);
+  flex-shrink: 0;
+}
+
+.popup-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.popup-titel {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.popup-subtitel {
+  font-size: 11px;
+  color: #a8bcd4;
+  letter-spacing: 0.1px;
+}
+
+.header-knoppen {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-knop {
+  background: transparent;
+  border: none;
+  color: #a8bcd4;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+  border-radius: 3px;
+}
+
+.header-knop:hover { color: var(--wit); }
+
+/* verberg verklein-icoon standaard */
+#vergrotKnop .icoon-verklein { display: none; }
+#vergrotKnop.groot .icoon-vergroot { display: none; }
+#vergrotKnop.groot .icoon-verklein { display: block; }
+
+/* ── Rode accentlijn onder header ── */
+.popup-header::after {
+  content: none;
+}
+
+.popup-header {
+  border-bottom: 3px solid var(--rood);
+}
+
+/* ── Grote modus (half scherm) ── */
+.chat-popup.groot {
+  width: min(680px, calc(100vw - 48px));
+  height: min(80vh, 820px);
+  transition: opacity 0.2s ease, transform 0.2s ease, width 0.25s ease, height 0.25s ease;
+}
+
+/* ── Chat venster ── */
+.chat-venster {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+  background: var(--wit);
+}
+
+/* ── Welkom ── */
+.welkom-bericht {
+  text-align: center;
+  color: var(--grijs-donker);
+  padding: 10px 0 4px;
+}
+
+.welkom-bericht p {
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #555;
+}
+
+.chip-rij {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.chip {
+  background: var(--grijs);
+  color: var(--navy);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 5px 11px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.chip:hover {
+  background: var(--grijs-mid);
+  border-color: #bbb;
+}
+
+/* ── Berichten ── */
+.bericht-rij {
+  display: flex;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.bericht-rij.gebruiker {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.bericht-rij.bot .avatar {
+  background: var(--navy);
+  color: var(--wit);
+}
+
+.bericht-rij.gebruiker .avatar {
+  background: var(--rood);
+  color: var(--wit);
+}
+
+.bericht-inhoud {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 83%;
+}
+
+.bericht-rij.gebruiker .bericht-inhoud {
+  align-items: flex-end;
+}
+
+.bubble {
+  padding: 9px 13px;
+  border-radius: var(--radius);
+  line-height: 1.55;
+  font-size: 13px;
+}
+
+.bericht-rij.gebruiker .bubble {
+  background: var(--rood);
+  color: var(--wit);
+  border-bottom-right-radius: 1px;
+}
+
+.bericht-rij.bot .bubble {
+  background: var(--grijs);
+  color: var(--tekst);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 1px;
+}
+
+.bubble p { margin-bottom: 5px; }
+.bubble p:last-child { margin-bottom: 0; }
+.bubble strong { font-weight: 600; }
+.bubble em { font-style: italic; }
+
+/* ── Sectiekaarten ── */
+.sectie-kaart {
+  background: var(--wit);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border-left: 3px solid var(--rood);
+}
+
+.sectie-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--grijs);
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+
+.sectie-titel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  min-width: 0;
+}
+
+.sectie-bron {
+  font-size: 10px;
+  background: var(--navy);
+  color: var(--wit);
+  padding: 2px 7px;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.2px;
+}
+
+.sectie-body {
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--tekst);
+}
+
+.sectie-body p { margin-bottom: 5px; }
+.sectie-body p:last-child { margin-bottom: 0; }
+.sectie-body ol, .sectie-body ul { padding-left: 16px; margin-bottom: 5px; }
+.sectie-body li { margin-bottom: 2px; }
+.sectie-body strong { font-weight: 600; }
+.sectie-body a { color: var(--blauw-link); }
+.sectie-body code {
+  background: var(--grijs);
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+/* ── Typ-indicator ── */
+.tik-tik {
+  display: flex;
+  gap: 4px;
+  padding: 10px 13px;
+  background: var(--grijs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  border-bottom-left-radius: 1px;
+  width: fit-content;
+}
+
+.tik-tik span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #999;
+  animation: tik 1.2s infinite;
+}
+
+.tik-tik span:nth-child(2) { animation-delay: 0.2s; }
+.tik-tik span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes tik {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* ── Invoerbalk ── */
+.invoer-balk {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--grijs);
+  flex-shrink: 0;
+}
+
+.invoer-balk input {
+  flex: 1;
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  outline: none;
+  background: var(--wit);
+  transition: border-color 0.15s;
+  font-family: inherit;
+  color: var(--tekst);
+}
+
+.invoer-balk input:focus {
+  border-color: var(--navy);
+}
+
+.invoer-balk input:disabled {
+  background: var(--grijs-mid);
+}
+
+#verstuurKnop {
+  width: 38px;
+  height: 38px;
+  background: var(--rood);
+  color: var(--wit);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+#verstuurKnop:hover { background: var(--rood-hover); }
+#verstuurKnop:disabled { background: #e08880; cursor: not-allowed; }

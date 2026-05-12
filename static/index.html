@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HandleidingChat</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+  <!-- Floating chat widget -->
+  <div class="chat-widget">
+
+    <!-- Popup venster -->
+    <div class="chat-popup" id="chatPopup" aria-hidden="true">
+      <div class="popup-header">
+        <div class="popup-header-info">
+          <span class="popup-titel">HandleidingChat</span>
+          <span class="popup-subtitel">088-525 7700 &nbsp;|&nbsp; helpdesk@avans.nl</span>
+        </div>
+        <div class="header-knoppen">
+          <button class="header-knop" id="vergrotKnop" onclick="vergrotChat()" aria-label="Venster vergroten">
+            <!-- normaal: vergroot icoon -->
+            <svg class="icoon-vergroot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+            </svg>
+            <!-- groot: verklein icoon -->
+            <svg class="icoon-verklein" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M8 3v5H3M21 16h-5v5M3 8l7 7M21 16l-7-7"/>
+            </svg>
+          </button>
+          <button class="header-knop sluit-knop" onclick="toggleChat()" aria-label="Sluiten">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="chat-venster" id="chatVenster">
+        <div class="welkom-bericht">
+          <p>Welkom! Stel een vraag over een van de beschikbare handleidingen.</p>
+          <div class="chip-rij">
+            <button class="chip" onclick="stuurVoorbeeldVraag('Hoe sluit ik een beamer aan?')">Beamer aansluiten</button>
+            <button class="chip" onclick="stuurVoorbeeldVraag('Hoe verbind ik met Eduroam?')">Verbinden met Eduroam</button>
+            <button class="chip" onclick="stuurVoorbeeldVraag('Printer doet het niet')">Printer werkt niet</button>
+            <button class="chip" onclick="stuurVoorbeeldVraag('Wat kun jij allemaal?')">Wat kun jij?</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="invoer-balk">
+        <input
+          type="text"
+          id="invoerVeld"
+          placeholder="Stel een vraag..."
+          autocomplete="off"
+          onkeydown="if(event.key==='Enter') verstuurBericht()"
+        />
+        <button id="verstuurKnop" onclick="verstuurBericht()" aria-label="Versturen">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Trigger knop -->
+    <button class="chat-knop" id="chatKnop" onclick="toggleChat()" aria-label="Chat openen">
+      <svg class="icoon-chat" viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+      </svg>
+      <svg class="icoon-sluiten" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="22" height="22">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
