@@ -1,136 +1,135 @@
 # HandleidingChat
 
-Een chatbot die vragen beantwoordt op basis van Markdown-handleidingen. De bot doorzoekt de beschikbare handleidingen en toont de meest relevante secties als antwoord.
+Een chatbot die vragen beantwoordt op basis van handleidingen (PDF, Word, Markdown). De bot doorzoekt de beschikbare handleidingen met semantische zoekopdrachten en toont de meest relevante secties als antwoord, inclusief een directe link naar de exacte pagina in de PDF.
+
+**Huidige versie:** zie [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
-## Wat heb je nodig?
+## Functionaliteiten
 
-- **Python 3.10 of hoger** — download via [python.org](https://www.python.org/downloads/)
-- **pip** — wordt automatisch meegeleverd met Python
+- Semantisch zoeken via sentence-transformers (`paraphrase-multilingual-MiniLM-L12-v2`)
+- Hybride scoring: cosine-similariteit + fuzzy-matching voor typefouten en samengestelde woorden
+- Ondersteunt PDF, Word (`.docx`) en Markdown (`.md`) handleidingen
+- Klikbare bronvermelding met directe link naar de pagina in de PDF
+- Sessiebeheer via localStorage (max. 20 gesprekken, 2 uur inactiviteit = nieuw gesprek)
+- Volledige pagina-layout met uitschuifbare zijbalk
+
+---
+
+## Vereisten
+
+- **Python 3.10 of hoger** — [python.org](https://www.python.org/downloads/)
+- **pip** — wordt meegeleverd met Python
 - Een **terminal** (PowerShell op Windows, Terminal op Mac/Linux)
 
 ---
 
-## Stap-voor-stap installatie
+## Installatie
 
-### Stap 1 — Download het project
-
-Klik op de groene **Code** knop rechtsboven op deze pagina en kies **Download ZIP**.  
-Pak het ZIP-bestand uit naar een map naar keuze, bijvoorbeeld `C:\Projects\HandleidingBot`.
-
-Of via Git (als je dat hebt geïnstalleerd):
+### 1 — Project downloaden
 
 ```bash
-git clone https://github.com/JorisFietje/HandleidingBot.git
-cd HandleidingBot
+git clone https://github.com/JorisFietje/HandleidingChat.git
+cd HandleidingChat
 ```
+
+Of download de ZIP via de groene **Code** knop op GitHub en pak deze uit.
 
 ---
 
-### Stap 2 — Open de terminal in de projectmap
-
-**Windows:**  
-Open de map in Verkenner, klik in de adresbalk, typ `powershell` en druk op Enter.
-
-**Mac/Linux:**  
-Open Terminal en navigeer naar de map:
-```bash
-cd pad/naar/HandleidingBot
-```
-
----
-
-### Stap 3 — Maak een virtuele omgeving aan (aanbevolen)
-
-Een virtuele omgeving zorgt ervoor dat de benodigde pakketten alleen voor dit project worden geïnstalleerd en niets op je systeem overschrijven.
+### 2 — Virtuele omgeving aanmaken
 
 ```bash
 python -m venv venv
 ```
 
-Activeer de virtuele omgeving:
+Activeren:
 
-- **Windows:**
-  ```bash
-  venv\Scripts\activate
-  ```
-- **Mac/Linux:**
-  ```bash
-  source venv/bin/activate
-  ```
+```bash
+# Windows
+venv\Scripts\activate
 
-Je ziet nu `(venv)` voor je prompt staan — dat betekent dat de omgeving actief is.
+# Mac / Linux
+source venv/bin/activate
+```
+
+Je ziet `(venv)` voor je prompt als de omgeving actief is.
 
 ---
 
-### Stap 4 — Installeer de benodigde pakketten
+### 3 — Pakketten installeren
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Dit installeert automatisch:
-- `fastapi` — het webframework
-- `uvicorn` — de webserver
-- `python-multipart` — voor formulierverwerking
+| Pakket | Waarvoor |
+|---|---|
+| `fastapi` | Webframework |
+| `uvicorn` | Webserver |
+| `sentence-transformers` | Semantisch zoeken (embedding model) |
+| `rapidfuzz` | Fuzzy-matching voor typefouten |
+| `pymupdf` | PDF-bestanden inlezen |
+| `python-docx` | Word-bestanden inlezen |
+| `numpy` | Vectorberekeningen |
+
+> **Let op:** het embedding model (`paraphrase-multilingual-MiniLM-L12-v2`, ~470 MB) wordt automatisch gedownload bij de eerste start.
 
 ---
 
-### Stap 5 — Start de server
+### 4 — Handleidingen toevoegen
+
+Zet bestanden in de map `handleidingen/`. Ondersteunde formaten:
+
+| Formaat | Vereisten |
+|---|---|
+| `.pdf` | Secties worden automatisch gedetecteerd op basis van lettergrootte en vetgedrukte tekst |
+| `.docx` | Gebruik Heading-stijlen (Heading 1, Heading 2 etc.) voor sectieopschriften |
+| `.md` | Gebruik `##` voor sectieopschriften |
+
+Richtlijn voor goede resultaten:
+- Elke sectie moet **minstens 80 tekens** inhoud bevatten
+- Sectietitels moeten **minstens 3 tekens** lang zijn
+- Hoe duidelijker de opbouw van het document, hoe beter de zoekresultaten
+
+---
+
+### 5 — Server starten
 
 ```bash
 uvicorn main:app --reload
 ```
 
-Je ziet output zoals:
-```
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-```
+Open vervolgens [http://localhost:8000](http://localhost:8000) in je browser.
 
 ---
 
-### Stap 6 — Open de chatbot in je browser
-
-Ga naar: [http://localhost:8000](http://localhost:8000)
-
-De chat-widget verschijnt rechtsonder in het scherm. Klik erop om een vraag te stellen.
-
----
-
-## Handleidingen toevoegen of aanpassen
-
-Alle handleidingen staan als Markdown-bestanden in de map `handleidingen/`.  
-Je kunt eenvoudig een nieuwe handleiding toevoegen:
-
-1. Maak een nieuw `.md`-bestand aan in de map `handleidingen/`, bijvoorbeeld `printer_handleiding.md`
-2. Gebruik `##` voor sectieopschriften — de bot gebruikt deze om antwoorden op te splitsen:
-
-```markdown
-# Printer Handleiding
-
-## Printer instellen
-Sluit de printer aan via USB of stel het netwerk in via...
-
-## Printer werkt niet
-Controleer of de printer aan staat en of er papier in zit...
-```
-
-3. Herstart de server — de nieuwe handleiding wordt automatisch ingeladen.
-
----
-
-## Server stoppen
+### 6 — Server stoppen
 
 Druk op `CTRL + C` in de terminal.
 
 ---
 
-## Problemen?
+## Zoekgedrag aanpassen
+
+In `chatbot.py` staan een aantal constanten die het zoekgedrag bepalen:
+
+| Constante | Standaard | Betekenis |
+|---|---|---|
+| `FUZZY_DREMPEL` | `82` | Minimale fuzzy-score (0–100) voor een trefwoordmatch |
+| `MIN_WOORDLENGTE` | `4` | Kortere woorden worden genegeerd bij fuzzy-matching |
+| `cosine > 0.42` | `0.42` | Minimale semantische relevantie; lager = meer resultaten, hoger = strikter |
+| `top_n` | `2` | Aantal secties dat per vraag wordt teruggegeven |
+
+---
+
+## Problemen
 
 | Probleem | Oplossing |
 |---|---|
-| `python` niet herkend | Probeer `python3` in plaats van `python` |
-| `pip` niet herkend | Probeer `pip3` of herinstalleer Python met de optie "Add to PATH" aangevinkt |
-| Poort 8000 al in gebruik | Start met een andere poort: `uvicorn main:app --reload --port 8080` |
-| Pagina laadt niet | Controleer of de server nog draait in de terminal |
+| `python` niet herkend | Probeer `python3` |
+| `pip` niet herkend | Probeer `pip3` of herinstalleer Python met "Add to PATH" aangevinkt |
+| Poort 8000 al in gebruik | `uvicorn main:app --reload --port 8080` |
+| Model downloadt niet | Controleer internetverbinding; model wordt eenmalig gecached in `~/.cache/huggingface/` |
+| PDF geeft geen resultaten | Controleer of de PDF tekstlagen heeft (geen gescande afbeelding) |

@@ -9,10 +9,12 @@ app = FastAPI(title="HandleidingChat")
 handleidingen = laad_handleidingen()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/handleidingen", StaticFiles(directory="handleidingen"), name="handleidingen-bestanden")
 
 
 class Bericht(BaseModel):
     tekst: str
+    filter: list[str] | None = None
 
 
 @app.get("/")
@@ -22,15 +24,14 @@ def index():
 
 @app.post("/chat")
 def chat(bericht: Bericht):
-    antwoord = genereer_antwoord(bericht.tekst, handleidingen)
-    return antwoord
+    return genereer_antwoord(bericht.tekst, handleidingen, filter_namen=bericht.filter or None)
 
 
-@app.get("/handleidingen")
+@app.get("/handleidingen-lijst")
 def lijst_handleidingen():
     return {
         "handleidingen": [
-            {"naam": naam, "secties": [s.titel for s in secties]}
+            {"naam": naam, "aantal_secties": len(secties)}
             for naam, secties in handleidingen.items()
         ]
     }
