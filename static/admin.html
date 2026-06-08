@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HandleidingChat – Admin</title>
+  <link rel="stylesheet" href="/static/admin.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <header class="admin-header">
+    <div class="admin-header-inner">
+      <span class="admin-titel">HandleidingChat · Admin</span>
+      <a class="admin-link" href="/">← Terug naar chat</a>
+    </div>
+  </header>
+
+  <main class="admin-main">
+
+    <!-- Instellingen -->
+    <section class="kaart">
+      <h2>LLM-instellingen</h2>
+      <p class="hint">Wijzigingen worden direct toegepast en opgeslagen. Geen herstart nodig.</p>
+
+      <div class="veld">
+        <label for="model">Model</label>
+        <select id="model"></select>
+        <span class="veld-hint">Lokaal beschikbare Ollama-modellen.</span>
+      </div>
+
+      <div class="slider-veld">
+        <label for="temperature">Temperatuur <output id="temperature_uit"></output></label>
+        <input type="range" id="temperature" min="0" max="2" step="0.05" />
+        <span class="veld-hint">0 = feitelijk/deterministisch · hoger = creatiever (en meer hallucinatierisico).</span>
+      </div>
+
+      <div class="slider-veld">
+        <label for="top_p">top_p <output id="top_p_uit"></output></label>
+        <input type="range" id="top_p" min="0" max="1" step="0.05" />
+        <span class="veld-hint">Nucleus sampling: aandeel waarschijnlijkheidsmassa dat meedoet.</span>
+      </div>
+
+      <div class="slider-veld">
+        <label for="top_k">top_k <output id="top_k_uit"></output></label>
+        <input type="range" id="top_k" min="1" max="100" step="1" />
+        <span class="veld-hint">Beperk keuze tot de k meest waarschijnlijke tokens.</span>
+      </div>
+
+      <div class="slider-veld">
+        <label for="repeat_penalty">repeat_penalty <output id="repeat_penalty_uit"></output></label>
+        <input type="range" id="repeat_penalty" min="0.5" max="2" step="0.05" />
+        <span class="veld-hint">Hoger ontmoedigt herhaling.</span>
+      </div>
+
+      <div class="veld-rij">
+        <div class="veld">
+          <label for="num_predict">num_predict</label>
+          <input type="number" id="num_predict" min="-1" max="8192" step="1" />
+          <span class="veld-hint">Max. tokens in antwoord (-1 = onbeperkt).</span>
+        </div>
+        <div class="veld">
+          <label for="num_ctx">num_ctx</label>
+          <input type="number" id="num_ctx" min="512" max="32768" step="512" />
+          <span class="veld-hint">Contextvenster (tokens).</span>
+        </div>
+        <div class="veld">
+          <label for="seed">seed</label>
+          <input type="number" id="seed" min="0" step="1" />
+          <span class="veld-hint">Vaste seed = reproduceerbaar.</span>
+        </div>
+      </div>
+
+      <h3>Retrieval (zoeken)</h3>
+      <div class="veld-rij">
+        <div class="veld">
+          <label for="top_n">top_n secties</label>
+          <input type="number" id="top_n" min="1" max="8" step="1" />
+          <span class="veld-hint">Aantal handleidingsecties naar de LLM.</span>
+        </div>
+        <div class="veld">
+          <label for="bronnen_tonen">bronnen tonen</label>
+          <input type="number" id="bronnen_tonen" min="1" max="8" step="1" />
+          <span class="veld-hint">Aantal bronnen getoond aan de gebruiker.</span>
+        </div>
+        <div class="veld">
+          <label for="drempel_globaal">drempel globaal</label>
+          <input type="number" id="drempel_globaal" min="0" max="1" step="0.01" />
+          <span class="veld-hint">Min. score zonder filter.</span>
+        </div>
+        <div class="veld">
+          <label for="drempel_filter">drempel filter</label>
+          <input type="number" id="drempel_filter" min="0" max="1" step="0.01" />
+          <span class="veld-hint">Min. score met handleidingfilter.</span>
+        </div>
+      </div>
+
+      <div class="veld">
+        <label for="system_prompt">Systeemprompt</label>
+        <textarea id="system_prompt" rows="12"></textarea>
+      </div>
+
+      <div class="knop-rij">
+        <button class="knop primair" onclick="bewaarInstellingen()">Opslaan</button>
+        <button class="knop" onclick="resetInstellingen()">Terug naar standaard</button>
+        <span id="bewaarStatus" class="status"></span>
+      </div>
+    </section>
+
+    <!-- Test runner -->
+    <section class="kaart">
+      <h2>Testset draaien</h2>
+      <p class="hint">Draait de handleidingspecifieke vragen tegen de huidige instellingen. Vergelijk het antwoord met het verwachte antwoord om te zien of een wijziging verbetert of verslechtert.</p>
+
+      <div class="knop-rij">
+        <button class="knop primair" id="testKnop" onclick="draaiTests()">Alle tests draaien</button>
+        <span id="testStatus" class="status"></span>
+      </div>
+
+      <div id="testResultaten" class="test-resultaten"></div>
+    </section>
+
+  </main>
+
+  <script src="/static/admin.js"></script>
+</body>
+</html>

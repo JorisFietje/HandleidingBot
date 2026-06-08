@@ -73,6 +73,13 @@ pip install -r requirements.txt
 | `pymupdf` | PDF-bestanden inlezen |
 | `python-docx` | Word-bestanden inlezen |
 | `numpy` | Vectorberekeningen |
+| `ollama` | Lokale LLM aansturen voor het genereren van antwoorden |
+
+> **Ollama vereist:** de antwoorden worden lokaal gegenereerd door een LLM via [Ollama](https://ollama.com). Installeer Ollama, start het, en haal een model op, bijvoorbeeld:
+> ```bash
+> ollama pull qwen2.5:7b
+> ```
+> Het standaardmodel is `qwen2.5:7b`. Je kunt het wijzigen via de adminpagina of via de omgevingsvariabele `OLLAMA_MODEL`.
 
 > **Let op:** het embedding model (`paraphrase-multilingual-MiniLM-L12-v2`, ~470 MB) wordt automatisch gedownload bij de eerste start.
 
@@ -111,16 +118,30 @@ Druk op `CTRL + C` in de terminal.
 
 ---
 
-## Zoekgedrag aanpassen
+## Adminpagina — LLM tweaken
 
-In `chatbot.py` staan een aantal constanten die het zoekgedrag bepalen:
+Open [http://localhost:8000/admin](http://localhost:8000/admin) om de LLM live af te stellen. Wijzigingen worden direct toegepast en opgeslagen in `admin_settings.json` (geen herstart nodig).
 
-| Constante | Standaard | Betekenis |
-|---|---|---|
-| `FUZZY_DREMPEL` | `82` | Minimale fuzzy-score (0–100) voor een trefwoordmatch |
-| `MIN_WOORDLENGTE` | `4` | Kortere woorden worden genegeerd bij fuzzy-matching |
-| `cosine > 0.42` | `0.42` | Minimale semantische relevantie; lager = meer resultaten, hoger = strikter |
-| `top_n` | `2` | Aantal secties dat per vraag wordt teruggegeven |
+**Instelbaar:**
+
+| Instelling | Betekenis |
+|---|---|
+| `model` | Welk lokaal Ollama-model wordt gebruikt (dropdown van beschikbare modellen) |
+| `temperature` | 0 = feitelijk/deterministisch, hoger = creatiever (en meer hallucinatierisico) |
+| `top_p` / `top_k` | Sampling-instellingen |
+| `repeat_penalty` | Ontmoedigt herhaling |
+| `num_predict` | Max. tokens in het antwoord (-1 = onbeperkt) |
+| `num_ctx` | Contextvenster in tokens |
+| `seed` | Vaste seed = reproduceerbare antwoorden (handig bij testen) |
+| `system_prompt` | De volledige systeeminstructie aan de LLM |
+| `top_n` | Aantal handleidingsecties dat naar de LLM gaat |
+| `drempel_globaal` / `drempel_filter` | Minimale zoekscore (lager = meer resultaten, hoger = strikter) |
+
+**Testset draaien:** onderaan de adminpagina kun je de handleidingspecifieke testvragen (`testset.json`) tegen de huidige instellingen draaien. Elk antwoord wordt naast het verwachte antwoord getoond, zodat je direct ziet of een wijziging de antwoorden verbetert of verslechtert. Pas een instelling aan → opslaan → tests opnieuw draaien → vergelijken.
+
+> Tip: zet `temperature` op `0` en een vaste `seed` tijdens het testen, zodat verschillen tussen runs door je instellingen komen en niet door toeval.
+
+Voeg eigen testvragen toe door `testset.json` aan te vullen (elk item heeft een `vraag` en een `verwacht` antwoord).
 
 ---
 

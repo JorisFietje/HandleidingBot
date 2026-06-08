@@ -5,6 +5,25 @@ Formaat gebaseerd op [Keep a Changelog](https://keepachangelog.com/nl/1.0.0/).
 
 ---
 
+## [1.3.0] — 2026-06-07
+
+### Toegevoegd
+- **Adminpagina** op `/admin` om de lokale LLM live af te stellen zonder herstart
+- Instelbare LLM-parameters: model, `temperature`, `top_p`, `top_k`, `repeat_penalty`, `num_predict`, `num_ctx`, `seed` en de volledige systeemprompt
+- Instelbare retrieval-parameters: `top_n` en de zoekdrempels (`drempel_globaal`, `drempel_filter`)
+- Instellingen worden gevalideerd, begrensd en opgeslagen in `admin_settings.json`
+- **Testset-runner** in de adminpagina: draait de handleidingspecifieke testvragen (`testset.json`) tegen de huidige instellingen en toont het antwoord naast het verwachte antwoord
+- **Automatische scoring** per testvraag: dekkingsscore op sleutelwoorden met oordeel goed/deels/mis, een lijst met ontbrekende sleutelwoorden, en een samenvatting (gem. dekking + telling) bovenaan. Getalnotaties (`10.000` / `10000`) worden genormaliseerd zodat ze gelijk tellen
+- **Admin-knop** in de header van de chatinterface, met directe link naar `/admin`
+- Nieuwe endpoints: `GET/POST /admin/settings`, `POST /admin/settings/reset`, `GET /admin/models`, `GET /admin/testset`, `POST /admin/test-een`
+
+### Gewijzigd
+- De Ollama-aanroep stuurt nu expliciet `options` mee (voorheen werden de standaardwaarden van Ollama gebruikt, niet instelbaar)
+- Systeemprompt, modelkeuze, `top_n` en zoekdrempels worden nu uit de centrale `settings`-module gelezen i.p.v. hardcoded in `chatbot.py`
+- **Bronvermelding compacter**: de twee grote sectiekaarten onder elk antwoord zijn vervangen door een compacte bronbalk met klikbare pill-knoppen (bestandsnaam + paginanummer, link naar de juiste PDF-pagina) in hetzelfde berichtblok. Dubbele bronnen worden samengevoegd.
+
+---
+
 ## [1.2.0] — 2026-05-19
 
 ### Toegevoegd

@@ -1,0 +1,49 @@
+{
+  "beschrijving": "Handleidingspecifieke testvragen met verwachte antwoorden. Gebruikt door de admin-pagina om te verifieren of wijzigingen het antwoord verbeteren of verslechteren.",
+  "vragen": [
+    {
+      "vraag": "Welke isolatie meetbereik heeft een Fluke 1503?",
+      "verwacht": "0,01 MΩ tot 2000 MΩ."
+    },
+    {
+      "vraag": "Wat is de maximale spanning waarmee een 1550C kan testen?",
+      "verwacht": "10000 V."
+    },
+    {
+      "vraag": "Hoe kan ik met een Fluke 1587 FC controleren of een stroomkring heel is?",
+      "verwacht": "De doorgangstest laat een pieptoon horen zolang een stroomkring heel is. Sluit de meter aan en stel in zoals in afbeelding 6. Er klinkt een pieptoon als er een kortsluiting (<25 Ω) wordt vastgesteld. (p.20 1587 FC-1587-1577 Users Manual.pdf)"
+    },
+    {
+      "vraag": "Hoe moet ik de Fluke 1654B verbinden om de fasesequentie te testen?",
+      "verwacht": "Gebruik de in afbeelding 22 getoonde verbinding wanneer u een fasevolgordetest verricht. (p.36 1652C-1653B-1654B Users Manual.pdf)"
+    },
+    {
+      "vraag": "Met een Fluke 1664 FC heb ik de foutcode Err 1 0004, wat is er aan de hand?",
+      "verwacht": "Zelftest mislukt - Fout bij zekering 1."
+    },
+    {
+      "vraag": "Hoe moet ik een log starten met een Fluke 1736?",
+      "verwacht": "Verwijzing naar p.35-36 van de 1736-1738 Users Manual."
+    },
+    {
+      "vraag": "Wat betekent het als ik met een Fluke 179 Lead in het scherm zie?",
+      "verwacht": "Om u eraan te herinneren dat u dient te controleren of de meetsnoeren in de juiste aansluitingen steken, verschijnt LEAd kortstondig op het display als u de draaischakelaar in of uit de stand mA of A zet."
+    },
+    {
+      "vraag": "Hoe kan ik data op een usb flash drive kopieren?",
+      "verwacht": "The Analyzer supports automatic actions on insertion of the USB flash drive. This is helpful to gather data from the Analyzer without the need to establish a connection to the Analyzer to download the data to the PC. (p.24 1773-1775-1777 Users Manual.pdf)"
+    },
+    {
+      "vraag": "apparatensnoertest",
+      "verwacht": "Verwijzing naar p.29."
+    },
+    {
+      "vraag": "Wat betekent ----- op het scherm van een 789?",
+      "verwacht": "Als de meter de geprogrammeerde stroom niet kan leveren omdat de belastingsweerstand te hoog is of de spanning van de lusvoeding te laag is, verschijnen er streepjes (-----) op het numerieke display. Als de impedantie over de SOURCE-aansluitingen laag genoeg is, hervat de meter het genereren."
+    },
+    {
+      "vraag": "Hoe moet ik een Fluke Ti400 onderhouden?",
+      "verwacht": "De Imager vereist geen onderhoud."
+    }
+  ]
+}
