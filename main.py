@@ -2,9 +2,9 @@ import os
 import re
 import json
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 import settings
@@ -29,9 +29,48 @@ def index():
     return FileResponse("static/index.html")
 
 
+@app.get("/metesco-favicon.svg")
+def favicon():
+    return FileResponse("metesco-favicon.svg", media_type="image/svg+xml")
+
+
 @app.post("/chat")
 def chat(bericht: Bericht):
     return genereer_antwoord(bericht.tekst, handleidingen, filter_namen=bericht.filter or None)
+
+
+@app.get("/afbeelding")
+def afbeelding(bestand: str, pagina: int, clip: str):
+    """Render één figuurregio van een PDF-pagina live als PNG.
+
+    Er wordt niets op schijf bewaard; de regio (clip = "x0,y0,x1,y1" in PDF-punten)
+    wordt per verzoek uit de PDF gerenderd. De browser cachet de respons."""
+    import fitz  # pymupdf
+
+    # path traversal voorkomen: enkel bestandsnaam, geen mappen
+    veilige_naam = os.path.basename(bestand)
+    pad = os.path.join("handleidingen", veilige_naam)
+    if not veilige_naam.lower().endswith(".pdf") or not os.path.exists(pad):
+        raise HTTPException(status_code=404, detail="Bestand niet gevonden")
+
+    try:
+        coords = [float(x) for x in clip.split(",")]
+        if len(coords) != 4:
+            raise ValueError("clip moet 4 coördinaten hebben")
+        with fitz.open(pad) as doc:
+            blad = doc[pagina - 1]
+            rect = fitz.Rect(coords[0] - 4, coords[1] - 4, coords[2] + 4, coords[3] + 4)
+            rect = rect & blad.rect  # binnen de pagina houden
+            pix = blad.get_pixmap(clip=rect, matrix=fitz.Matrix(2, 2))
+            data = pix.tobytes("png")
+    except Exception:
+        raise HTTPException(status_code=404, detail="Afbeelding niet gevonden")
+
+    return Response(
+        content=data,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 @app.get("/handleidingen-lijst")

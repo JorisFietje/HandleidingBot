@@ -75,6 +75,7 @@ function laadHuidigeSessie() {
 
   sessie.berichten.forEach(({ tekst, rol, secties }) => {
     const inhoud = _renderBericht(tekst, rol);
+    _renderAfbeeldingen(inhoud, secties);
     _renderBronnen(inhoud, secties);
   });
 }
@@ -206,6 +207,7 @@ function laadSessie(id) {
   chatVenster.innerHTML = "";
   sessie.berichten.forEach(({ tekst, rol, secties }) => {
     const inhoud = _renderBericht(tekst, rol);
+    _renderAfbeeldingen(inhoud, secties);
     _renderBronnen(inhoud, secties);
   });
 
@@ -252,7 +254,12 @@ function _renderBericht(tekst, rol) {
 
   const avatar = document.createElement("div");
   avatar.className = "avatar";
-  avatar.textContent = rol === "gebruiker" ? "U" : "B";
+  if (rol === "gebruiker") {
+    avatar.textContent = "U";
+  } else {
+    avatar.classList.add("avatar-logo");
+    avatar.innerHTML = `<img src="/metesco-favicon.svg" alt="Metesco" />`;
+  }
 
   const inhoud = document.createElement("div");
   inhoud.className = "bericht-inhoud";
@@ -279,7 +286,7 @@ function _renderBericht(tekst, rol) {
   return inhoud;
 }
 
-function _renderOpties(inhoud, opties) {
+function _renderOpties(inhoud, opties, kiesApparaat = false) {
   if (!opties || !opties.length) return;
   const rij = document.createElement("div");
   rij.className = "chip-rij opties-rij";
@@ -287,11 +294,142 @@ function _renderOpties(inhoud, opties) {
     const chip = document.createElement("button");
     chip.className = "chip";
     chip.textContent = opt.replace(/\s*users\s*manual\s*$/i, "").trim() || opt;
-    chip.onclick = () => stuurVoorbeeldVraag(opt);
+    // Bij een apparaatkeuze: filter zetten én de oorspronkelijke vraag opnieuw
+    // stellen, zodat de gebruiker niet hoeft te hertypen.
+    chip.onclick = kiesApparaat
+      ? () => kiesApparaatEnHervraag(opt)
+      : () => stuurVoorbeeldVraag(opt);
     rij.appendChild(chip);
   });
   inhoud.appendChild(rij);
   scrollNaarOnderen();
+}
+
+// De vraag die nog op een apparaatkeuze wacht (bij de "Voor welk apparaat?"-vraag).
+let _wachtendeVraag = null;
+
+function kiesApparaatEnHervraag(handleidingNaam) {
+  huidigFilter = [handleidingNaam];
+  const vraag = _wachtendeVraag;
+  _wachtendeVraag = null;
+  if (vraag) {
+    stuurVoorbeeldVraag(vraag);          // opnieuw stellen, nu met gekozen apparaat
+  } else {
+    stuurVoorbeeldVraag(handleidingNaam); // fallback: gedraag je als gewone keuze
+  }
+}
+
+function _renderAfbeeldingen(inhoud, secties) {
+  if (!secties || !secties.length) return;
+
+  // verzamel unieke afbeeldings-URL's over alle secties
+  const gezien = new Set();
+  const urls = [];
+  for (const s of secties) {
+    for (const url of (s.afbeeldingen || [])) {
+      if (gezien.has(url)) continue;
+      gezien.add(url);
+      urls.push(url);
+    }
+  }
+  if (!urls.length) return;
+
+  const galerij = document.createElement("div");
+  galerij.className = "afbeelding-galerij";
+
+  urls.forEach((url, i) => {
+    const knop = document.createElement("button");
+    knop.type = "button";
+    knop.className = "afbeelding-item";
+    knop.title = "Klik om te vergroten";
+    knop.onclick = () => openLightbox(urls, i);
+
+    const img = document.createElement("img");
+    img.src = url;
+    img.loading = "lazy";
+    img.alt = "Afbeelding uit de handleiding";
+    // verwijder de thumbnail als hij niet laadt (bv. PDF gewijzigd)
+    img.onerror = () => knop.remove();
+
+    knop.appendChild(img);
+    galerij.appendChild(knop);
+  });
+
+  inhoud.appendChild(galerij);
+  scrollNaarOnderen();
+}
+
+// ── Lightbox (vergroot + carousel) ──────────────────────────────────────────
+let _lightboxUrls = [];
+let _lightboxIndex = 0;
+
+function _zorgLightbox() {
+  let lb = document.getElementById("lightbox");
+  if (lb) return lb;
+
+  lb = document.createElement("div");
+  lb.id = "lightbox";
+  lb.className = "lightbox";
+  lb.hidden = true;
+  lb.innerHTML = `
+    <div class="lightbox-balk">
+      <button class="lightbox-sluit" type="button" aria-label="Sluiten" title="Sluiten">&times;</button>
+    </div>
+    <button class="lightbox-nav lightbox-prev" type="button" aria-label="Vorige">&#8249;</button>
+    <img class="lightbox-img" alt="Afbeelding uit de handleiding" />
+    <button class="lightbox-nav lightbox-next" type="button" aria-label="Volgende">&#8250;</button>
+    <div class="lightbox-teller"></div>
+  `;
+  document.body.appendChild(lb);
+
+  lb.querySelector(".lightbox-sluit").onclick = sluitLightbox;
+  lb.querySelector(".lightbox-prev").onclick = (e) => { e.stopPropagation(); lightboxStap(-1); };
+  lb.querySelector(".lightbox-next").onclick = (e) => { e.stopPropagation(); lightboxStap(1); };
+  lb.querySelector(".lightbox-img").onclick = (e) => e.stopPropagation();
+  lb.onclick = (e) => { if (e.target === lb || e.target.classList.contains("lightbox-balk")) sluitLightbox(); };
+  return lb;
+}
+
+function openLightbox(urls, index) {
+  _lightboxUrls = urls || [];
+  _lightboxIndex = index || 0;
+  if (!_lightboxUrls.length) return;
+  const lb = _zorgLightbox();
+  lb.hidden = false;
+  document.body.classList.add("lightbox-open");
+  _toonLightbox();
+  document.addEventListener("keydown", _lightboxToets);
+}
+
+function _toonLightbox() {
+  const lb = document.getElementById("lightbox");
+  if (!lb) return;
+  lb.querySelector(".lightbox-img").src = _lightboxUrls[_lightboxIndex];
+  const meer = _lightboxUrls.length > 1;
+  lb.querySelector(".lightbox-prev").style.display = meer ? "" : "none";
+  lb.querySelector(".lightbox-next").style.display = meer ? "" : "none";
+  const teller = lb.querySelector(".lightbox-teller");
+  teller.textContent = meer ? `${_lightboxIndex + 1} / ${_lightboxUrls.length}` : "";
+  teller.style.display = meer ? "" : "none";
+}
+
+function lightboxStap(d) {
+  if (!_lightboxUrls.length) return;
+  _lightboxIndex = (_lightboxIndex + d + _lightboxUrls.length) % _lightboxUrls.length;
+  _toonLightbox();
+}
+
+function sluitLightbox() {
+  const lb = document.getElementById("lightbox");
+  if (lb) lb.hidden = true;
+  document.body.classList.remove("lightbox-open");
+  document.removeEventListener("keydown", _lightboxToets);
+}
+
+function _lightboxToets(e) {
+  if (e.key === "Escape") sluitLightbox();
+  else if (e.key === "ArrowLeft") lightboxStap(-1);
+  else if (e.key === "ArrowRight") lightboxStap(1);
 }
 
 const _docIcoon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
@@ -361,8 +499,8 @@ function toonTypIndicator() {
   rij.id = "typIndicator";
 
   const avatar = document.createElement("div");
-  avatar.className = "avatar";
-  avatar.textContent = "B";
+  avatar.className = "avatar avatar-logo";
+  avatar.innerHTML = `<img src="/metesco-favicon.svg" alt="Metesco" />`;
 
   const inhoud = document.createElement("div");
   inhoud.className = "bericht-inhoud";
@@ -428,10 +566,15 @@ async function verstuurBericht() {
     if (data.set_filter !== undefined && data.set_filter !== null) {
       huidigFilter = data.set_filter.length > 0 ? data.set_filter : null;
     }
+    // Onthoud de vraag als de bot om een apparaatkeuze vraagt, zodat we 'm na de
+    // keuze automatisch opnieuw kunnen stellen.
+    _wachtendeVraag = data.kies_apparaat ? tekst : null;
+
     const botInhoud = _renderBericht(data.tekst, "bot");
     slaBerichtOp(data.tekst, "bot", data.secties);  // slaat ook huidigFilter op
+    _renderAfbeeldingen(botInhoud, data.secties);
     _renderBronnen(botInhoud, data.secties);
-    _renderOpties(botInhoud, data.opties);
+    _renderOpties(botInhoud, data.opties, data.kies_apparaat);
   } catch {
     verwijderTypIndicator();
     _renderBericht("Er ging iets mis. Probeer het opnieuw.", "bot");
