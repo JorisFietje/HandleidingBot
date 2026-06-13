@@ -1,3 +1,23 @@
+"""Webserver en HTTP-endpoints (FastAPI).
+
+Dit is de instaplaag van de applicatie: hier draait de webserver en worden alle
+URL's gedefinieerd. De inhoudelijke logica zit in chatbot.py en settings.py; dit
+bestand vertaalt HTTP-verzoeken naar aanroepen daarvan en stuurt het resultaat als
+JSON of bestand terug.
+
+Bij het starten worden de handleidingen één keer ingelezen (laad_handleidingen) en
+in geheugen gehouden, zodat elke vraag snel beantwoord wordt.
+
+Endpoints:
+- GET  /                  -> de chatinterface (static/index.html)
+- POST /chat              -> beantwoordt een vraag (kernfunctie)
+- GET  /afbeelding        -> rendert één figuur uit een PDF live als PNG
+- GET  /handleidingen-lijst -> namen + aantal secties per handleiding
+- GET  /admin             -> de adminpagina (static/admin.html)
+- GET/POST /admin/settings, /admin/settings/reset, /admin/models  -> instellingen
+- GET  /admin/testset, POST /admin/test-een  -> testset draaien en scoren
+"""
+
 import os
 import re
 import json

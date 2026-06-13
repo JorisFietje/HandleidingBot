@@ -1,3 +1,23 @@
+"""Kern van de chatbot: handleidingen inlezen, doorzoeken en antwoorden genereren.
+
+Dit bestand bevat de hele "denklaag" van de applicatie en kent grofweg vier delen:
+
+1. Inladen  - PDF/Word/Markdown-handleidingen inlezen en opdelen in secties
+              (_parseer_pdf, _parseer_docx, _parseer_md) + een kwaliteitsfilter.
+2. Indexeren - per sectie een embedding (sentence-transformers) en trefwoord-set
+              berekenen, zodat we later snel kunnen zoeken.
+3. Zoeken   - de meest relevante secties bij een vraag vinden via een hybride score
+              (semantische cosine-similariteit + fuzzy trefwoordmatch), met extra's
+              als modelnummer-routing, taalfilter en deduplicatie (zoek_secties).
+4. Antwoord - de gevonden secties als context aan een lokale LLM (Ollama) geven en
+              het antwoord opschonen + bronnen/afbeeldingen samenstellen
+              (genereer_antwoord).
+
+De webserver (main.py) roept alleen laad_handleidingen() en genereer_antwoord() aan;
+al het andere is interne hulplogica. Instelbare waarden (drempels, top_n, het LLM-
+model, de systeemprompt) komen uit de settings-module, niet hardcoded.
+"""
+
 import os
 import re
 import logging

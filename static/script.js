@@ -1,3 +1,18 @@
+// ============================================================================
+// script.js — frontend van de chatinterface (index.html)
+//
+// Vanilla JavaScript, geen framework. Verantwoordelijk voor:
+// - Sessiebeheer: gesprekken bewaren in localStorage (max. 20; nieuw gesprek na
+//   2 uur inactiviteit) en de geschiedenis in de zijbalk tonen.
+// - Berichten versturen naar de backend (POST /chat) en het antwoord renderen.
+// - Het antwoord opbouwen: tekst (via marked → Markdown), bronknoppen,
+//   afbeeldingsgalerij met lightbox, en keuze-chips (bv. apparaatkeuze).
+// - UX-hulp: typ-indicator tijdens het wachten, auto-resizing invoerveld en
+//   autocomplete op handleidingnamen.
+//
+// De DOM-structuur staat in index.html; de opmaak in style.css.
+// ============================================================================
+
 const chatVenster  = document.getElementById("chatVenster");
 const invoerVeld   = document.getElementById("invoerVeld");
 const verstuurKnop = document.getElementById("verstuurKnop");

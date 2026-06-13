@@ -1,3 +1,15 @@
+// ============================================================================
+// admin.js — frontend van de adminpagina (admin.html)
+//
+// Vanilla JavaScript. Twee taken:
+// 1. LLM-instellingen: het formulier vullen vanuit GET /admin/settings en
+//    wijzigingen opslaan via POST /admin/settings (de backend valideert en
+//    begrenst de waarden, en geeft de genormaliseerde versie terug).
+// 2. Testset-runner: de testvragen ophalen (GET /admin/testset) en stuk voor
+//    stuk draaien (POST /admin/test-een), met een live samenvatting en per vraag
+//    een oordeel (goed/deels/mis) + ontbrekende sleutelwoorden.
+// ============================================================================
+
 // Velden die als getal/tekst direct uit de inputs worden gelezen
 const NUMERIEKE_VELDEN = [
   "temperature", "top_p", "top_k", "repeat_penalty",
