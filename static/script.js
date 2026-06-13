@@ -307,15 +307,19 @@ function _renderOpties(inhoud, opties, kiesApparaat = false) {
 
 // De vraag die nog op een apparaatkeuze wacht (bij de "Voor welk apparaat?"-vraag).
 let _wachtendeVraag = null;
+// Eenmalig filter: enkel voor de heropgevraagde vraag na een apparaatkeuze. Wordt
+// NIET persistent (anders zou de volgende, nieuwe vraag in dat apparaat blijven zoeken).
+let _eenmaligFilter = null;
 
 function kiesApparaatEnHervraag(handleidingNaam) {
-  huidigFilter = [handleidingNaam];
   const vraag = _wachtendeVraag;
   _wachtendeVraag = null;
   if (vraag) {
-    stuurVoorbeeldVraag(vraag);          // opnieuw stellen, nu met gekozen apparaat
+    _eenmaligFilter = [handleidingNaam];  // alleen voor deze ene vraag
+    stuurVoorbeeldVraag(vraag);           // opnieuw stellen, met het gekozen apparaat
   } else {
-    stuurVoorbeeldVraag(handleidingNaam); // fallback: gedraag je als gewone keuze
+    huidigFilter = [handleidingNaam];     // fallback: gedraag je als gewone keuze
+    stuurVoorbeeldVraag(handleidingNaam);
   }
 }
 
@@ -552,11 +556,16 @@ async function verstuurBericht() {
   setLaadStatus(true);
   toonTypIndicator();
 
+  // Eenmalig filter (na apparaatkeuze) heeft voorrang, maar wordt meteen vergeten,
+  // zodat een volgende vraag weer vrij is.
+  const filterVoorVerzoek = _eenmaligFilter || huidigFilter;
+  _eenmaligFilter = null;
+
   try {
     const response = await fetch("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tekst, filter: huidigFilter }),
+      body: JSON.stringify({ tekst, filter: filterVoorVerzoek }),
     });
     if (!response.ok) throw new Error();
     const data = await response.json();

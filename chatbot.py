@@ -871,6 +871,15 @@ def genereer_antwoord(
     # verandert de embeddings/context en kan het antwoord onbedoeld beïnvloeden.
     antwoord = _schoon_glyphs(_genereer_llm_antwoord(_verduidelijk_symbolen(bericht), gevonden))
 
+    # Het model plakt de "niet gevonden"-melding soms achter een verder prima
+    # antwoord (hedging). Verwijder die melding als er een inhoudelijk antwoord
+    # overblijft; staat hij er alléén, dan laten we hem als echte melding staan.
+    zonder_melding = re.sub(
+        r"\s*Deze informatie staat niet in de beschikbare handleiding\.?", "", antwoord
+    ).strip()
+    if len(zonder_melding) >= 25:
+        antwoord = zonder_melding
+
     # Verwijzing naar de getoonde afbeelding voegen we in code toe — niet via de
     # prompt. Een afbeelding-instructie maakt kleinere modellen overdreven
     # terughoudend bij randgevallen; zo houden we de antwoordkwaliteit én verwijzen
