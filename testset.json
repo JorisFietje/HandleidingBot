@@ -7,7 +7,7 @@
     },
     {
       "vraag": "Wat is de maximale spanning waarmee een 1550C kan testen?",
-      "verwacht": "10000 V."
+      "verwacht": "5000 V."
     },
     {
       "vraag": "Hoe kan ik met een Fluke 1587 FC controleren of een stroomkring heel is?",
@@ -40,10 +40,6 @@
     {
       "vraag": "Wat betekent ----- op het scherm van een 789?",
       "verwacht": "Als de meter de geprogrammeerde stroom niet kan leveren omdat de belastingsweerstand te hoog is of de spanning van de lusvoeding te laag is, verschijnen er streepjes (-----) op het numerieke display. Als de impedantie over de SOURCE-aansluitingen laag genoeg is, hervat de meter het genereren."
-    },
-    {
-      "vraag": "Hoe moet ik een Fluke Ti400 onderhouden?",
-      "verwacht": "De Imager vereist geen onderhoud."
     }
   ]
 }

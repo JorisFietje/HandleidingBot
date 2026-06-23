@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HandleidingChat</title>
   <link rel="icon" href="/metesco-favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/static/style.css?v=2" />
+  <link rel="stylesheet" href="/static/style.css?v=7" />
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 </head>
 <body>
 
@@ -57,7 +58,7 @@
       </header>
 
       <!-- Chat berichten -->
-      <main class="chat-venster" id="chatVenster">
+      <main class="chat-venster" id="chatVenster" aria-live="polite" aria-atomic="false">
         <div class="welkom-bericht">
           <div class="welkom-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32">
@@ -71,6 +72,8 @@
 
       <!-- Invoerbalk -->
       <footer class="invoer-balk">
+        <!-- Badge: actieve handleiding (zichtbaar zodra er een filter geldt) -->
+        <div class="actieve-filter" id="actieveFilter" hidden></div>
         <div class="invoer-inner">
           <div class="invoer-wrapper">
             <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
@@ -93,6 +96,6 @@
     </div>
   </div>
 
-  <script src="/static/script.js?v=19"></script>
+  <script src="/static/script.js?v=25"></script>
 </body>
 </html>

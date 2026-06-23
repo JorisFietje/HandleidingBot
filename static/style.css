@@ -458,8 +458,12 @@ html, body {
 .bericht-rij.bot .avatar { background: var(--wit); border: 1px solid var(--border); }
 .bericht-rij.gebruiker .avatar { background: var(--rood); color: var(--wit); }
 
-/* Logo-avatar (Metesco) i.p.v. een letter */
-.avatar.avatar-logo { padding: 4px; }
+/* Logo-avatar (Metesco) i.p.v. een letter: geen kader/achtergrond, logo vult de avatar */
+.bericht-rij.bot .avatar.avatar-logo {
+  padding: 0;
+  background: none;
+  border: none;
+}
 .avatar.avatar-logo img {
   width: 100%;
   height: 100%;
@@ -508,6 +512,70 @@ html, body {
 .bubble p { margin-bottom: 6px; }
 .bubble p:last-child { margin-bottom: 0; }
 .bubble strong { font-weight: 600; }
+
+/* Foutbubble + "Probeer opnieuw"-knop bij een mislukt verzoek */
+.bubble-fout {
+  background: #fdf2f2 !important;
+  border-color: #f3c6c6 !important;
+  color: #8a1f24 !important;
+}
+.opnieuw-knop {
+  color: var(--navy);
+  border-color: var(--border);
+  font-weight: 600;
+}
+.opnieuw-knop:hover:not(:disabled) {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--wit);
+}
+
+/* Tijdens het streamen tonen we ruwe tekst (witruimte behouden) met een knipperende
+   cursor; na afloop wordt dit vervangen door opgemaakte (Markdown) HTML. */
+.bubble-tekst.streamt {
+  white-space: pre-wrap;
+}
+.bubble-tekst.streamt::after {
+  content: "▍";
+  margin-left: 1px;
+  animation: cursor-knipper 1s steps(2) infinite;
+  color: var(--grijs-donker);
+}
+@keyframes cursor-knipper { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
+
+/* ── Feedbackbalk onder een botantwoord (kopiëren staat in de bubble) ── */
+.bericht-acties {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 2px;
+}
+
+.actie-knop {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--grijs-donker);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.actie-knop:hover:not(:disabled) {
+  background: var(--grijs);
+  border-color: var(--border);
+  color: var(--tekst);
+}
+.actie-knop:disabled { cursor: default; }
+.actie-knop.gelukt { color: var(--navy); }
+
+.actie-knop.duim.gekozen { color: var(--navy); }
+.actie-knop.duim.omlaag svg { transform: rotate(180deg); }
+.actie-knop.duim.omlaag.gekozen { color: var(--rood); }
 
 /* ── Bronbalk (compacte bronvermelding onder het antwoord) ── */
 .bron-balk {
@@ -772,6 +840,61 @@ body.lightbox-open { overflow: hidden; }
   margin: 0 auto;
 }
 
+/* ── Actieve handleiding-badge ── */
+.actieve-filter {
+  max-width: 860px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 4px 6px 4px 12px;
+  background: var(--grijs);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--tekst);
+}
+.actieve-filter[hidden] { display: none; }
+
+.filter-chip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.filter-chip-label > span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50vw;
+}
+.filter-chip-icon {
+  display: inline-flex;
+  color: var(--navy);
+}
+.filter-chip-icon svg { display: block; }
+
+.filter-chip-wis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--grijs-donker);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+.filter-chip-wis:hover {
+  background: var(--rood);
+  color: var(--wit);
+}
+
 .invoer-balk textarea {
   flex: 1;
   min-width: 0;
@@ -840,4 +963,30 @@ body.lightbox-open { overflow: hidden; }
 
 .ai-label svg {
   display: block;
+}
+
+/* Kopieerknop: rechtsonder in de bubble, verschijnt pas als je over het
+   antwoord beweegt. Witte achtergrond zodat hij leesbaar over tekst staat. */
+.kopieer-knop {
+  position: absolute;
+  bottom: 5px;
+  right: 6px;
+  opacity: 0;
+  padding: 3px;
+  background: var(--wit);
+  border-color: var(--border);
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.bubble:hover .kopieer-knop,
+.kopieer-knop:focus-visible,
+.kopieer-knop.gelukt {
+  opacity: 1;
+}
+.kopieer-knop:hover:not(:disabled) {
+  background: var(--grijs);
+  color: var(--tekst);
+}
+/* Op touch-apparaten (geen hover) altijd zichtbaar. */
+@media (hover: none) {
+  .kopieer-knop { opacity: 1; }
 }

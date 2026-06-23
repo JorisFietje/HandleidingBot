@@ -74,14 +74,25 @@ pip install -r requirements.txt
 | `python-docx` | Word-bestanden inlezen |
 | `numpy` | Vectorberekeningen |
 | `ollama` | Lokale LLM aansturen voor het genereren van antwoorden |
+| `google-genai` | Antwoorden genereren via Google Gemini (cloud) |
+| `python-dotenv` | Sleutels uit het `.env`-bestand inladen |
 
-> **Ollama vereist:** de antwoorden worden lokaal gegenereerd door een LLM via [Ollama](https://ollama.com). Installeer Ollama, start het, en haal een model op, bijvoorbeeld:
+De antwoorden kunnen door **twee** taalmodellen worden gegenereerd; je kiest welke via de adminpagina of automatisch via het `.env`-bestand:
+
+> **Optie A — Google Gemini (cloud, eenvoudigst):** maak een `.env`-bestand aan (kopieer `.env.example`) en vul je sleutel in:
+> ```bash
+> cp .env.example .env
+> # zet vervolgens in .env:  GEMINI_API_KEY=jouw_sleutel
+> ```
+> Een sleutel haal je gratis op via [Google AI Studio](https://aistudio.google.com/apikey). Zodra de key aanwezig is, schakelt de chatbot **automatisch** over op Gemini — verder hoeft er niets te worden ingesteld. Het standaardmodel is `gemini-2.5-flash` (aanpasbaar via de adminpagina of `GEMINI_MODEL`).
+
+> **Optie B — Ollama (lokaal, geen API-key):** de antwoorden worden lokaal gegenereerd via [Ollama](https://ollama.com). Installeer Ollama, start het, en haal een model op, bijvoorbeeld:
 > ```bash
 > ollama pull qwen2.5:7b
 > ```
-> Het standaardmodel is `qwen2.5:7b`. Je kunt het wijzigen via de adminpagina of via de omgevingsvariabele `OLLAMA_MODEL`.
+> Het standaardmodel is `qwen2.5:7b`. Je kunt het wijzigen via de adminpagina of via de omgevingsvariabele `OLLAMA_MODEL`. Als er geen `GEMINI_API_KEY` is, gebruikt de chatbot standaard Ollama.
 
-> **Let op:** het embedding model (`paraphrase-multilingual-MiniLM-L12-v2`, ~470 MB) wordt automatisch gedownload bij de eerste start.
+> **Let op:** het embedding model (`paraphrase-multilingual-MiniLM-L12-v2`, ~470 MB) wordt automatisch gedownload bij de eerste start. Dit wordt altijd gebruikt voor het zoeken, ongeacht welk antwoordmodel je kiest.
 
 ---
 
@@ -126,6 +137,8 @@ Open [http://localhost:8000/admin](http://localhost:8000/admin) om de LLM live a
 
 | Instelling | Betekenis |
 |---|---|
+| `provider` | Welk platform de antwoorden genereert: `ollama` (lokaal) of `gemini` (cloud) |
+| `gemini_model` | Welk Gemini-model wordt gebruikt (bv. `gemini-2.5-flash` of `gemini-2.5-pro`) |
 | `model` | Welk lokaal Ollama-model wordt gebruikt (dropdown van beschikbare modellen) |
 | `temperature` | 0 = feitelijk/deterministisch, hoger = creatiever (en meer hallucinatierisico) |
 | `top_p` / `top_k` | Sampling-instellingen |

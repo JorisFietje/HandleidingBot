@@ -12,8 +12,9 @@ zie [ROADMAP.md](ROADMAP.md). Voor installeren en starten, zie [README.md](READM
 ## 1. Wat doet de applicatie in het kort?
 
 Een gebruiker stelt een vraag in de chat. De applicatie zoekt de meest relevante
-secties uit de handleidingen, geeft die als context aan een lokale taalmodel (LLM),
-en toont het gegenereerde antwoord met een bronvermelding en eventueel afbeeldingen.
+secties uit de handleidingen, geeft die als context aan een taalmodel (LLM) — lokaal
+via Ollama of in de cloud via Google Gemini — en toont het gegenereerde antwoord met
+een bronvermelding en eventueel afbeeldingen.
 
 **De reis van een vraag (request flow):**
 
@@ -21,15 +22,16 @@ en toont het gegenereerde antwoord met een bronvermelding en eventueel afbeeldin
 Browser (script.js)
    │  POST /chat  { tekst, filter }
    ▼
-main.py  ──►  chatbot.genereer_antwoord()
+main.py  ──►  chatbot.generate_answer()        (chatbot/answer.py)
                  │
-                 ├─ zoek_secties()        → relevante secties (semantisch + fuzzy)
-                 │     └─ settings.get_instellingen()  (drempels, top_n)
+                 ├─ search_sections()      → relevante secties (semantisch + fuzzy)
+                 │     └─ settings.get_settings()      (drempels, top_n)
                  │
-                 ├─ _genereer_llm_antwoord()  → Ollama (lokaal model)
-                 │     └─ settings.get_llm_opties()    (temperature, seed, ...)
+                 ├─ _generate_llm_answer()  → llm_providers.generate()
+                 │     └─ Ollama (lokaal)  óf  Gemini (cloud), o.b.v. settings.provider
+                 │        └─ settings.get_llm_options()  (temperature, seed, ...)
                  │
-                 └─ _afbeelding_urls()     → links naar PDF-figuren
+                 └─ _image_urls()          → links naar PDF-figuren
    ▼
 Browser krijgt JSON terug { tekst, secties, opties, afbeeldingen }
    │  rendert antwoord, bronknoppen en afbeeldingsgalerij
@@ -49,13 +51,18 @@ Browser krijgt JSON terug { tekst, secties, opties, afbeeldingen }
 | **rapidfuzz** | Fuzzy-matching: trefwoorden vinden ondanks typefouten en samengestelde woorden. Vult het semantisch zoeken aan. |
 | **PyMuPDF (`fitz`)** | PDF's inlezen (tekst + opmaak voor sectiedetectie) en figuren live als PNG renderen. |
 | **python-docx** | Word-bestanden (`.docx`) inlezen via Heading-stijlen. |
-| **Ollama** | Draait het taalmodel (LLM) lokaal op de eigen machine; genereert het uiteindelijke antwoord. Standaardmodel: `qwen2.5:7b`. |
+| **Ollama** | Draait het taalmodel (LLM) lokaal op de eigen machine; genereert het antwoord zonder API-kosten. Standaardmodel: `qwen2.5:7b`. |
+| **Google Gemini** (`google-genai`) | Alternatieve LLM-provider in de cloud; wordt automatisch gebruikt zodra er een `GEMINI_API_KEY` in `.env` staat. Standaardmodel: `gemini-2.5-flash`. |
+| **python-dotenv** | Laadt sleutels (bv. `GEMINI_API_KEY`) uit het `.env`-bestand in de omgeving. |
 | **Vanilla HTML/CSS/JS** | De frontend, bewust zonder framework — klein en zonder buildstap. |
 | **marked.js** | Zet de Markdown uit het LLM-antwoord om naar HTML (via CDN geladen). |
 | **localStorage** | Bewaart de gespreksgeschiedenis in de browser (geen database nodig). |
 
-> **Waarom lokaal (Ollama) i.p.v. een cloud-API?** Privacy en kosten: de handleidingen
-> en vragen verlaten de eigen machine niet, en er zijn geen API-kosten per vraag.
+> **Lokaal (Ollama) of cloud (Gemini)?** Ollama houdt handleidingen en vragen op de
+> eigen machine en kost niets per vraag; Gemini vereist alleen een API-key in `.env`
+> en geen lokale GPU/model. De keuze staat in `settings.provider` (of automatisch:
+> Gemini zodra er een key is). De abstractie zit in `llm_providers.py`, zodat de rest
+> van de code niet weet welke provider draait.
 
 ---
 
@@ -65,40 +72,54 @@ Browser krijgt JSON terug { tekst, secties, opties, afbeeldingen }
 
 #### `main.py` — webserver & endpoints
 De instaplaag. Hier draait FastAPI en worden alle URL's gedefinieerd. Dit bestand
-bevat zelf weinig logica: het vertaalt HTTP-verzoeken naar aanroepen van `chatbot.py`
-en `settings.py`, en stuurt het resultaat terug als JSON of bestand. Bij het starten
-worden de handleidingen één keer ingelezen en in geheugen gehouden.
+bevat zelf weinig logica: het vertaalt HTTP-verzoeken naar aanroepen van het
+`chatbot`-package en `settings.py`, en stuurt het resultaat terug als JSON of bestand.
+Bij het starten worden de handleidingen één keer ingelezen en in geheugen gehouden.
 
 Belangrijkste endpoints:
 - `POST /chat` — de kernfunctie: beantwoordt een vraag.
 - `GET /afbeelding` — rendert één figuurregio uit een PDF live als PNG (niets wordt
   opgeslagen; bevat een check tegen path-traversal voor de veiligheid).
 - `GET /admin` + `/admin/*` — de adminpagina en de instellingen-/testset-endpoints.
-- De scorings­logica voor de testset (`_belangrijke_tokens`, `_scoor_antwoord`) zit
-  hier, omdat ze alleen voor de admin-endpoints nodig is.
+- De scorings­logica voor de testset (`_key_tokens`, `_score_answer`) zit hier, omdat
+  ze alleen voor de admin-endpoints nodig is.
 
-#### `chatbot.py` — de "denklaag"
-Het hart van de applicatie. Vier verantwoordelijkheden:
-1. **Inladen** (`laad_handleidingen`, `_parseer_pdf/_docx/_md`): handleidingen inlezen
-   en opdelen in secties, met een kwaliteitsfilter dat rommel (inhoudsopgaven, lege
-   blokken) wegfiltert.
-2. **Indexeren** (`_bereken_embeddings`, `_trefwoorden`): per sectie een embedding en
-   een trefwoord-set berekenen.
-3. **Zoeken** (`zoek_secties`): de relevante secties bij een vraag vinden via een
-   hybride score (semantische cosine-similariteit + fuzzy trefwoordmatch), met
-   modelnummer-routing, taalfilter, score-boosts (foutcodes, symboolpatronen) en
-   deduplicatie.
-4. **Antwoord** (`genereer_antwoord`, `_genereer_llm_antwoord`, `_afbeelding_urls`):
-   de gevonden secties als context aan Ollama geven, het antwoord opschonen, en de
-   bronnen en figuren samenstellen.
+> De route-paden en JSON-keys (`tekst`, `secties`, `vraag`, ...) zijn het contract met
+> de frontend en zijn daarom Nederlands gebleven; de Python-namen zijn Engels.
+
+#### `chatbot/` — de "denklaag" (package)
+Het hart van de applicatie, opgesplitst per verantwoordelijkheid. `__init__.py`
+her-exporteert de publieke API (`load_manuals`, `generate_answer`, `STOPWORDS`).
+
+| Module | Verantwoordelijkheid |
+|---|---|
+| `model.py` | De `Section`-dataclass + gedeelde constanten (`STOPWORDS`, `MANUALS_DIR`, ...). Geen interne afhankelijkheden. |
+| `text.py` | Tekst-helpers: taaldetectie, trefwoorden (`_keywords`), fuzzy-score, glyph-opschoning, symboolpatronen. |
+| `embeddings.py` | Het embedding-model (lazy via `_get_model`) + `_compute_embeddings` en `_cosine_scores`. |
+| `loading.py` | Inladen: `load_manuals` + de PDF/Word/Markdown-parsers + kwaliteitsfilter. |
+| `search.py` | `search_sections`: hybride score (cosine + fuzzy) met modelnummer-routing, taalfilter, boosts (foutcodes, symboolpatronen) en deduplicatie. |
+| `images.py` | PDF-figuren lokaliseren (`_image_urls`, `_regions_on_page`) + de figuur-index die `loading.py` vult. |
+| `answer.py` | `generate_answer`: intentieherkenning, het zoeken aansturen, de LLM aanroepen (`_generate_llm_answer`) en bronnen/figuren samenstellen. |
+
+Afhankelijkheidsgraaf (acyclisch): `model` → {`text`, `embeddings`, `images`} →
+`loading`; {`text`, `embeddings`} → `search`; {`model`, `text`, `search`, `images`}
+→ `answer`.
+
+#### `llm_providers.py` — taalmodel-abstractie
+De enige plek die weet hóé een antwoord bij een LLM wordt opgehaald. `generate()`
+kiest op basis van `settings.provider` tussen Ollama (lokaal) en Gemini (cloud) en
+vertaalt de samplingparameters naar het formaat van die provider. `gemini_available()`
+meldt of er een API-key in `.env` staat. De Gemini-client wordt lazy opgebouwd.
 
 #### `settings.py` — instellingen (runtime aanpasbaar)
-Centrale plek voor alle afstelbare waarden: het LLM-model, samplingparameters
-(temperature, top_p, seed, ...), de systeemprompt en de retrieval-drempels. De
-adminpagina leest en schrijft deze via de `/admin`-endpoints. Waarden worden
-**gevalideerd en begrensd** (`_valideer` + `_GRENZEN`) en opgeslagen in
-`admin_settings.json`, zodat ze een herstart overleven. Niets vereist een herstart:
-elke vraag leest de instellingen opnieuw uit.
+Centrale plek voor alle afstelbare waarden: de provider, het LLM-model (Ollama én
+Gemini), samplingparameters (temperature, top_p, seed, ...), de systeemprompt en de
+retrieval-drempels. Laadt ook `.env` (via python-dotenv). De adminpagina leest en
+schrijft deze via de `/admin`-endpoints. Waarden worden **gevalideerd en begrensd**
+(`_validate` + `_BOUNDS`) en opgeslagen in `admin_settings.json`, zodat ze een herstart
+overleven. Niets vereist een herstart: elke vraag leest de instellingen opnieuw uit.
+De dict-keys (`model`, `temperature`, `drempel_globaal`, ...) zijn het contract met de
+adminpagina en blijven daarom Nederlands.
 
 ### Frontend (in `static/`)
 
@@ -130,7 +151,8 @@ opslaan, tests draaien en scoren), en `admin.css` verzorgt de opmaak.
 | `testset.json` | Testvragen met een verwacht antwoord, voor de testset-runner op de adminpagina. |
 | `admin_settings.json` | De opgeslagen admin-instellingen. Wordt automatisch aangemaakt; staat in `.gitignore` (machine-specifiek). |
 | `metesco-favicon.svg` | Het logo/favicon. |
-| `requirements.txt` | De Python-pakketten met versies. |
+| `docs/requirements.txt` | De Python-pakketten met versies. |
+| `.env` / `.env.example` | Sleutels (bv. `GEMINI_API_KEY`) voor de cloud-provider. `.env.example` is het sjabloon; `.env` zelf staat in `.gitignore`. |
 | `.gitignore` | Houdt `__pycache__/`, `.env` en `admin_settings.json` buiten git. |
 
 ---
@@ -150,16 +172,16 @@ Puur semantisch zoeken mist soms exacte trefwoorden, typefouten en samengestelde
 woorden (bv. "789" of "opdrachtbeschrijving"). Daarom combineren wij de cosine-score
 met een **fuzzy trefwoord-score** (rapidfuzz). Het semantische deel vangt de betekenis;
 het fuzzy deel vangt de letterlijke termen. Samen geeft dat duidelijk betere resultaten
-dan elk apart. De details (boosts, drempels, taalfilter) staan in `zoek_secties`.
+dan elk apart. De details (boosts, drempels, taalfilter) staan in `search_sections`.
 
 ---
 
 ## 5. Hoe alles samenkomt bij het starten
 
 1. `uvicorn main:app` start de webserver.
-2. `main.py` roept `laad_handleidingen()` aan → PDF's/Word/Markdown worden ingelezen,
+2. `main.py` roept `load_manuals()` aan → PDF's/Word/Markdown worden ingelezen,
    opgedeeld in secties en van embeddings voorzien (eenmalig, in geheugen).
 3. De server serveert `index.html`; de browser laadt `script.js`.
-4. Elke vraag gaat via `POST /chat` naar `genereer_antwoord()`, die zoekt, de LLM
-   aanroept en het antwoord met bronnen/afbeeldingen teruggeeft.
+4. Elke vraag gaat via `POST /chat` naar `generate_answer()`, die zoekt, de LLM
+   aanroept (Ollama of Gemini) en het antwoord met bronnen/afbeeldingen teruggeeft.
 5. Via `/admin` kunnen instellingen live worden aangepast zonder herstart.

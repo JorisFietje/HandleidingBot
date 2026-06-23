@@ -7,6 +7,7 @@
   <link rel="icon" href="/metesco-favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/static/admin.css" />
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 </head>
 <body>
   <header class="admin-header">
@@ -24,9 +25,25 @@
       <p class="hint">Wijzigingen worden direct toegepast en opgeslagen. Geen herstart nodig.</p>
 
       <div class="veld">
-        <label for="model">Model</label>
+        <label for="provider">Provider</label>
+        <select id="provider">
+          <option value="ollama">Ollama (lokaal)</option>
+          <option value="gemini">Google Gemini (cloud)</option>
+        </select>
+        <span class="veld-hint" id="provider_hint">Kies het taalmodel-platform. Gemini vereist een API-key in het .env-bestand.</span>
+      </div>
+
+      <div class="veld" id="model_veld">
+        <label for="model">Ollama-model</label>
         <select id="model"></select>
         <span class="veld-hint">Lokaal beschikbare Ollama-modellen.</span>
+      </div>
+
+      <div class="veld" id="gemini_model_veld">
+        <label for="gemini_model">Gemini-model</label>
+        <input list="gemini_modellen" id="gemini_model" />
+        <datalist id="gemini_modellen"></datalist>
+        <span class="veld-hint">Bijv. gemini-2.5-flash (snel/goedkoop) of gemini-2.5-pro (sterker).</span>
       </div>
 
       <div class="slider-veld">

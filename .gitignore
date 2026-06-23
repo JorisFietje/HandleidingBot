@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .env
 admin_settings.json
+embeddings_cache.npz
+parse_cache.json
+feedback.jsonl

@@ -13,11 +13,12 @@
 // De DOM-structuur staat in index.html; de opmaak in style.css.
 // ============================================================================
 
-const chatVenster  = document.getElementById("chatVenster");
-const invoerVeld   = document.getElementById("invoerVeld");
-const verstuurKnop = document.getElementById("verstuurKnop");
-const sessieLijst  = document.getElementById("sessieLijst");
-const zijbalk      = document.getElementById("zijbalk");
+const chatVenster   = document.getElementById("chatVenster");
+const invoerVeld    = document.getElementById("invoerVeld");
+const verstuurKnop  = document.getElementById("verstuurKnop");
+const sessieLijst   = document.getElementById("sessieLijst");
+const zijbalk       = document.getElementById("zijbalk");
+const actieveFilterEl = document.getElementById("actieveFilter");
 
 // Actieve handleiding-filter (null = geen filter)
 let huidigFilter = null;
@@ -46,6 +47,56 @@ function getSessies() {
 
 function saveSessies(sessies) {
   localStorage.setItem(OPSLAG_SLEUTEL, JSON.stringify(sessies));
+}
+
+// ── Actieve handleiding-badge ───────────────────────────────────────────────────
+// Toont welke handleiding momenteel is gekozen, met een knop om die los te laten.
+// Document-icoon (géén externe-link-icoon: de badge linkt nergens heen).
+const _handleidingIcoon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>';
+
+function _handleidingLabel(naam) {
+  return naam.replace(/\s*users\s*manual\s*$/i, "").trim() || naam;
+}
+
+function werkFilterBadgeBij() {
+  if (!actieveFilterEl) return;
+  if (!huidigFilter || !huidigFilter.length) {
+    actieveFilterEl.hidden = true;
+    actieveFilterEl.replaceChildren();
+    return;
+  }
+  const naam = huidigFilter.map(_handleidingLabel).join(", ");
+
+  const label = document.createElement("span");
+  label.className = "filter-chip-label";
+  const icon = document.createElement("span");
+  icon.className = "filter-chip-icon";
+  icon.innerHTML = _handleidingIcoon;
+  const naamEl = document.createElement("span");
+  naamEl.textContent = naam;
+  label.append(icon, naamEl);
+
+  const wis = document.createElement("button");
+  wis.type = "button";
+  wis.className = "filter-chip-wis";
+  wis.title = "Handleiding loslaten";
+  wis.setAttribute("aria-label", "Handleiding loslaten");
+  wis.textContent = "✕";
+  wis.onclick = wisFilter;
+
+  actieveFilterEl.replaceChildren(label, wis);
+  actieveFilterEl.hidden = false;
+}
+
+function wisFilter() {
+  huidigFilter = null;
+  const sessies = getSessies();
+  if (sessies.length) {
+    sessies[sessies.length - 1].filter = null;
+    saveSessies(sessies);
+  }
+  werkFilterBadgeBij();
+  invoerVeld.focus();
 }
 
 function initialiseerSessie() {
@@ -84,14 +135,18 @@ function laadHuidigeSessie() {
   if (!sessie.berichten.length) return;
 
   huidigFilter = sessie.filter || null;
+  werkFilterBadgeBij();
 
   const welkom = chatVenster.querySelector(".welkom-bericht");
   if (welkom) welkom.remove();
 
+  let vorigeVraag = "";
   sessie.berichten.forEach(({ tekst, rol, secties }) => {
     const inhoud = _renderBericht(tekst, rol);
     _renderAfbeeldingen(inhoud, secties);
     _renderBronnen(inhoud, secties);
+    if (rol === "gebruiker") vorigeVraag = tekst;
+    else if (secties && secties.length) _renderActies(inhoud, { vraag: vorigeVraag, antwoord: tekst });
   });
 }
 
@@ -218,12 +273,16 @@ function laadSessie(id) {
   saveSessies(sessies);
 
   huidigFilter = sessie.filter || null;
+  werkFilterBadgeBij();
 
   chatVenster.innerHTML = "";
+  let vorigeVraag = "";
   sessie.berichten.forEach(({ tekst, rol, secties }) => {
     const inhoud = _renderBericht(tekst, rol);
     _renderAfbeeldingen(inhoud, secties);
     _renderBronnen(inhoud, secties);
+    if (rol === "gebruiker") vorigeVraag = tekst;
+    else if (secties && secties.length) _renderActies(inhoud, { vraag: vorigeVraag, antwoord: tekst });
   });
 
   renderSessieLijst();
@@ -239,6 +298,7 @@ function nieuwGesprek() {
   saveSessies(sessies);
 
   huidigFilter = null;
+  werkFilterBadgeBij();
 
   chatVenster.innerHTML = `
     <div class="welkom-bericht">
@@ -263,6 +323,15 @@ function scrollNaarOnderen() {
   chatVenster.scrollTop = chatVenster.scrollHeight;
 }
 
+// Markdown → veilige HTML. DOMPurify haalt eventuele scripts/onclick-attributen weg
+// (bv. uit gebruikersinvoer of handleidingtekst) zodat innerHTML veilig is.
+function renderMarkdown(tekst) {
+  const html = marked.parse(tekst || "");
+  return window.DOMPurify ? DOMPurify.sanitize(html) : html;
+}
+
+const _ai_label_svg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 2l1.9 5.3a5 5 0 0 0 2.8 2.8L22 12l-5.3 1.9a5 5 0 0 0-2.8 2.8L12 22l-1.9-5.3a5 5 0 0 0-2.8-2.8L2 12l5.3-1.9a5 5 0 0 0 2.8-2.8L12 2z"/><path d="M19 3l.6 1.6A2 2 0 0 0 20.4 5.4L22 6l-1.6.6a2 2 0 0 0-1.4 1.4L19 9l-.6-1.6a2 2 0 0 0-1.4-1.4L15 6l1.6-.6a2 2 0 0 0 1.4-1.4L19 3z"/></svg>`;
+
 function _renderBericht(tekst, rol) {
   const rij = document.createElement("div");
   rij.className = `bericht-rij ${rol}`;
@@ -281,7 +350,7 @@ function _renderBericht(tekst, rol) {
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.innerHTML = marked.parse(tekst);
+  bubble.innerHTML = renderMarkdown(tekst);
 
   inhoud.appendChild(bubble);
 
@@ -290,7 +359,7 @@ function _renderBericht(tekst, rol) {
     aiLabel.className = "ai-label";
     aiLabel.title = "AI-gegenereerd";
     aiLabel.setAttribute("aria-label", "AI-gegenereerd");
-    aiLabel.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M12 2l1.9 5.3a5 5 0 0 0 2.8 2.8L22 12l-5.3 1.9a5 5 0 0 0-2.8 2.8L12 22l-1.9-5.3a5 5 0 0 0-2.8-2.8L2 12l5.3-1.9a5 5 0 0 0 2.8-2.8L12 2z"/><path d="M19 3l.6 1.6A2 2 0 0 0 20.4 5.4L22 6l-1.6.6a2 2 0 0 0-1.4 1.4L19 9l-.6-1.6a2 2 0 0 0-1.4-1.4L15 6l1.6-.6a2 2 0 0 0 1.4-1.4L19 3z"/></svg>`;
+    aiLabel.innerHTML = _ai_label_svg;
     bubble.insertBefore(aiLabel, bubble.firstChild);
   }
 
@@ -299,6 +368,44 @@ function _renderBericht(tekst, rol) {
   chatVenster.appendChild(rij);
   scrollNaarOnderen();
   return inhoud;
+}
+
+// Maak een leeg botbericht aan om tijdens het streamen te vullen. Geeft referenties
+// terug naar de inhoud-container (voor bronnen/afbeeldingen/acties) en het
+// tekst-element (dat tijdens het streamen wordt bijgewerkt).
+function _maakBotBericht() {
+  const rij = document.createElement("div");
+  rij.className = "bericht-rij bot";
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar avatar-logo";
+  avatar.innerHTML = `<img src="/metesco-favicon.svg" alt="Metesco" />`;
+
+  const inhoud = document.createElement("div");
+  inhoud.className = "bericht-inhoud";
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+
+  // Rechtsboven in de bubble: het AI-sterretje. De kopieerknop komt later (via
+  // _renderActies) rechtsonder in de bubble te staan.
+  const aiLabel = document.createElement("span");
+  aiLabel.className = "ai-label";
+  aiLabel.title = "AI-gegenereerd";
+  aiLabel.setAttribute("aria-label", "AI-gegenereerd");
+  aiLabel.innerHTML = _ai_label_svg;
+
+  const tekstEl = document.createElement("div");
+  tekstEl.className = "bubble-tekst streamt";
+
+  bubble.appendChild(aiLabel);
+  bubble.appendChild(tekstEl);
+  inhoud.appendChild(bubble);
+  rij.appendChild(avatar);
+  rij.appendChild(inhoud);
+  chatVenster.appendChild(rij);
+  scrollNaarOnderen();
+  return { inhoud, tekstEl };
 }
 
 function _renderOpties(inhoud, opties, kiesApparaat = false) {
@@ -334,6 +441,7 @@ function kiesApparaatEnHervraag(handleidingNaam) {
     stuurVoorbeeldVraag(vraag);           // opnieuw stellen, met het gekozen apparaat
   } else {
     huidigFilter = [handleidingNaam];     // fallback: gedraag je als gewone keuze
+    werkFilterBadgeBij();
     stuurVoorbeeldVraag(handleidingNaam);
   }
 }
@@ -500,6 +608,73 @@ function _renderBronnen(inhoud, secties) {
   scrollNaarOnderen();
 }
 
+// ── Acties bij een botantwoord (kopiëren in de bubble + feedback eronder) ───────
+const _kopieerIcoon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+const _vinkIcoon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>';
+const _duimIcoon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>';
+const _herhaalIcoon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
+
+function _renderActies(inhoud, { vraag, antwoord }) {
+  // Geen acties bij lege/fout-antwoorden.
+  if (!antwoord || !antwoord.trim()) return;
+
+  // Kopiëren: rechtsonder in de bubble (verschijnt bij hover), zodat de balk
+  // onder het antwoord rustig blijft met enkel de feedbackknoppen.
+  const bubble = inhoud.querySelector(".bubble");
+  if (bubble) {
+    const kopieer = document.createElement("button");
+    kopieer.className = "actie-knop kopieer-knop";
+    kopieer.type = "button";
+    kopieer.title = "Antwoord kopiëren";
+    kopieer.setAttribute("aria-label", "Antwoord kopiëren");
+    kopieer.innerHTML = _kopieerIcoon;
+    kopieer.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(antwoord);
+        kopieer.classList.add("gelukt");
+        kopieer.innerHTML = _vinkIcoon;
+        setTimeout(() => {
+          kopieer.classList.remove("gelukt");
+          kopieer.innerHTML = _kopieerIcoon;
+        }, 1500);
+      } catch { /* clipboard niet beschikbaar */ }
+    };
+    bubble.appendChild(kopieer);
+  }
+
+  const balk = document.createElement("div");
+  balk.className = "bericht-acties";
+
+  // Feedback (👍 / 👎)
+  const maakDuim = (oordeel, label, omlaag) => {
+    const knop = document.createElement("button");
+    knop.className = "actie-knop duim" + (omlaag ? " omlaag" : "");
+    knop.type = "button";
+    knop.title = label;
+    knop.setAttribute("aria-label", label);
+    knop.innerHTML = _duimIcoon;
+    knop.onclick = () => stuurFeedback(balk, knop, { vraag, antwoord, oordeel });
+    return knop;
+  };
+  balk.appendChild(maakDuim("positief", "Goed antwoord", false));
+  balk.appendChild(maakDuim("negatief", "Onjuist of onvolledig", true));
+
+  inhoud.appendChild(balk);
+}
+
+async function stuurFeedback(balk, gekozen, { vraag, antwoord, oordeel }) {
+  // Markeer de keuze en zet beide duimen vast (één stem per antwoord).
+  balk.querySelectorAll(".duim").forEach((b) => { b.disabled = true; });
+  gekozen.classList.add("gekozen");
+  try {
+    await fetch("/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vraag: vraag || "", antwoord, oordeel }),
+    });
+  } catch { /* stilletjes negeren: feedback is niet kritiek */ }
+}
+
 // Fasen die de gebruiker te zien krijgt terwijl op het antwoord wordt gewacht.
 // De backend antwoordt in één keer (geen streaming), dus deze lopen op een timer
 // en geven een indicatie van wat er ongeveer gebeurt. Per fase een eigen duur (ms):
@@ -568,43 +743,134 @@ async function verstuurBericht() {
   invoerVeld.style.height = "auto";
   _renderBericht(tekst, "gebruiker");
   slaBerichtOp(tekst, "gebruiker");
-  setLaadStatus(true);
-  toonTypIndicator();
 
   // Eenmalig filter (na apparaatkeuze) heeft voorrang, maar wordt meteen vergeten,
   // zodat een volgende vraag weer vrij is.
   const filterVoorVerzoek = _eenmaligFilter || huidigFilter;
   _eenmaligFilter = null;
 
+  await _verzoekEnAntwoord(tekst, filterVoorVerzoek);
+}
+
+// Doet het daadwerkelijke verzoek + verwerkt het antwoord. Apart van verstuurBericht
+// zodat een retry dezelfde vraag (met hetzelfde filter) opnieuw kan uitvoeren zonder
+// het gebruikersbericht nogmaals te tonen of op te slaan.
+async function _verzoekEnAntwoord(tekst, filterVoorVerzoek) {
+  setLaadStatus(true);
+  toonTypIndicator();
   try {
-    const response = await fetch("/chat", {
+    const response = await fetch("/chat/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tekst, filter: filterVoorVerzoek }),
     });
-    if (!response.ok) throw new Error();
-    const data = await response.json();
-
-    verwijderTypIndicator();
-
-    if (data.set_filter !== undefined && data.set_filter !== null) {
-      huidigFilter = data.set_filter.length > 0 ? data.set_filter : null;
-    }
-    // Onthoud de vraag als de bot om een apparaatkeuze vraagt, zodat we 'm na de
-    // keuze automatisch opnieuw kunnen stellen.
-    _wachtendeVraag = data.kies_apparaat ? tekst : null;
-
-    const botInhoud = _renderBericht(data.tekst, "bot");
-    slaBerichtOp(data.tekst, "bot", data.secties);  // slaat ook huidigFilter op
-    _renderAfbeeldingen(botInhoud, data.secties);
-    _renderBronnen(botInhoud, data.secties);
-    _renderOpties(botInhoud, data.opties, data.kies_apparaat);
+    if (!response.ok || !response.body) throw new Error();
+    await _verwerkStream(response, tekst);
   } catch {
     verwijderTypIndicator();
-    _renderBericht("Er ging iets mis. Probeer het opnieuw.", "bot");
+    toonFoutBericht(tekst, filterVoorVerzoek);
   }
-
   setLaadStatus(false);
+}
+
+// Foutbericht met een "Probeer opnieuw"-knop die exact dezelfde vraag herhaalt.
+// Wordt niet in de sessie opgeslagen (alleen een tijdelijke melding).
+function toonFoutBericht(vraag, filterVoorVerzoek) {
+  const rij = document.createElement("div");
+  rij.className = "bericht-rij bot";
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar avatar-logo";
+  avatar.innerHTML = `<img src="/metesco-favicon.svg" alt="Metesco" />`;
+
+  const inhoud = document.createElement("div");
+  inhoud.className = "bericht-inhoud";
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble bubble-fout";
+  bubble.textContent = "Er ging iets mis bij het ophalen van het antwoord. Controleer uw internetverbinding en probeer het opnieuw.";
+
+  const balk = document.createElement("div");
+  balk.className = "bericht-acties";
+  const opnieuw = document.createElement("button");
+  opnieuw.type = "button";
+  opnieuw.className = "actie-knop opnieuw-knop";
+  opnieuw.innerHTML = _herhaalIcoon + "<span>Probeer opnieuw</span>";
+  opnieuw.onclick = () => {
+    rij.remove();
+    _verzoekEnAntwoord(vraag, filterVoorVerzoek);
+  };
+  balk.appendChild(opnieuw);
+
+  inhoud.append(bubble, balk);
+  rij.append(avatar, inhoud);
+  chatVenster.appendChild(rij);
+  scrollNaarOnderen();
+}
+
+// Lees de Server-Sent-Events-stroom en bouw het botbericht live op.
+async function _verwerkStream(response, vraag) {
+  const reader  = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let bot = null;        // { inhoud, tekstEl } zodra het eerste stuk binnen is
+  let streamTekst = "";  // ruwe, meegestreamde tekst (vóór opschoning)
+
+  const verwerkEvent = (ev) => {
+    if (ev.type === "delta") {
+      if (!bot) { verwijderTypIndicator(); bot = _maakBotBericht(); }
+      streamTekst += ev.tekst || "";
+      bot.tekstEl.textContent = streamTekst;  // textContent = veilig tijdens streamen
+      scrollNaarOnderen();
+    } else if (ev.type === "final") {
+      verwijderTypIndicator();
+      if (!bot) bot = _maakBotBericht();
+      _verwerkFinaal(bot, ev, vraag);
+    }
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // SSE: events gescheiden door een lege regel ("\n\n").
+    let grens;
+    while ((grens = buffer.indexOf("\n\n")) !== -1) {
+      const blok = buffer.slice(0, grens);
+      buffer = buffer.slice(grens + 2);
+      for (const regel of blok.split("\n")) {
+        if (!regel.startsWith("data:")) continue;
+        try { verwerkEvent(JSON.parse(regel.slice(5).trim())); } catch { /* skip */ }
+      }
+    }
+  }
+}
+
+// Verwerk het definitieve antwoord: opgeschoonde tekst, bronnen, afbeeldingen,
+// keuze-chips en de actiebalk; en sla het op in de sessie.
+function _verwerkFinaal(bot, data, vraag) {
+  if (data.set_filter !== undefined && data.set_filter !== null) {
+    huidigFilter = data.set_filter.length > 0 ? data.set_filter : null;
+    werkFilterBadgeBij();
+  }
+  // Onthoud de vraag als de bot om een apparaatkeuze vraagt, zodat we 'm na de
+  // keuze automatisch opnieuw kunnen stellen.
+  _wachtendeVraag = data.kies_apparaat ? vraag : null;
+
+  bot.tekstEl.classList.remove("streamt");
+  bot.tekstEl.innerHTML = renderMarkdown(data.tekst);
+
+  slaBerichtOp(data.tekst, "bot", data.secties);  // slaat ook huidigFilter op
+  _renderAfbeeldingen(bot.inhoud, data.secties);
+  _renderBronnen(bot.inhoud, data.secties);
+  _renderOpties(bot.inhoud, data.opties, data.kies_apparaat);
+  // Acties (kopiëren + feedback) alleen bij een echt antwoord — herkenbaar aan
+  // aanwezige bronnen. Begroetingen, keuze-prompts en "niets gevonden" hebben er geen.
+  if (data.secties && data.secties.length) {
+    _renderActies(bot.inhoud, { vraag, antwoord: data.tekst });
+  }
+  scrollNaarOnderen();
 }
 
 function stuurVoorbeeldVraag(vraag) {
@@ -728,6 +994,7 @@ const _heeftBestaandeSessie = (() => {
   return s.length > 0 && s[s.length - 1].berichten.length > 0;
 })();
 laadHuidigeSessie();
+werkFilterBadgeBij();
 renderSessieLijst();
 if (!_heeftBestaandeSessie) {
   stuurWelkomBericht();

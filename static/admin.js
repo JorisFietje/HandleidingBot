@@ -20,12 +20,36 @@ const SLIDERS = ["temperature", "top_p", "top_k", "repeat_penalty"];
 
 const $ = (id) => document.getElementById(id);
 
+// Onthoudt of er een Gemini-API-key in de omgeving (.env) gevonden is.
+let geminiBeschikbaar = false;
+
 // ── Laden ──────────────────────────────────────────────────────────────────
 async function init() {
   await Promise.all([laadModellen(), laadInstellingen()]);
   SLIDERS.forEach((id) => {
     $(id).addEventListener("input", () => updateSliderUit(id));
   });
+  $("provider").addEventListener("change", updateProviderUI);
+}
+
+// Toon de relevante velden (Ollama-model of Gemini-model) bij de gekozen provider
+// en waarschuw als Gemini is gekozen zonder dat er een API-key gevonden is.
+function updateProviderUI() {
+  const provider = $("provider").value;
+  $("model_veld").style.display = provider === "ollama" ? "" : "none";
+  $("gemini_model_veld").style.display = provider === "gemini" ? "" : "none";
+
+  const hint = $("provider_hint");
+  if (provider === "gemini" && !geminiBeschikbaar) {
+    hint.textContent = "⚠️ Geen GEMINI_API_KEY gevonden in .env — Gemini geeft een foutmelding tot de key is ingesteld.";
+    hint.className = "veld-hint waarschuwing";
+  } else if (provider === "gemini") {
+    hint.textContent = "✓ Gemini-API-key gevonden in .env.";
+    hint.className = "veld-hint ok";
+  } else {
+    hint.textContent = "Lokaal model via Ollama. Geen API-key nodig.";
+    hint.className = "veld-hint";
+  }
 }
 
 function updateSliderUit(id) {
@@ -49,6 +73,16 @@ async function laadModellen() {
     if (!(data.models || []).length) {
       sel.innerHTML = '<option value="">(geen modellen gevonden)</option>';
     }
+
+    // Gemini: beschikbaarheid onthouden + de modelsuggesties vullen
+    geminiBeschikbaar = !!data.gemini_beschikbaar;
+    const lijst = $("gemini_modellen");
+    lijst.innerHTML = "";
+    (data.gemini_modellen || []).forEach((m) => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      lijst.appendChild(opt);
+    });
   } catch {
     sel.innerHTML = '<option value="">(kon modellen niet laden)</option>';
   }
@@ -71,14 +105,23 @@ function vulFormulier(inst) {
   }
   sel.value = inst.model;
 
+  if (inst.provider) $("provider").value = inst.provider;
+  $("gemini_model").value = inst.gemini_model || "";
+
   NUMERIEKE_VELDEN.forEach((k) => { if (k in inst) $(k).value = inst[k]; });
   $("system_prompt").value = inst.system_prompt || "";
   SLIDERS.forEach(updateSliderUit);
+  updateProviderUI();
 }
 
 // ── Opslaan ────────────────────────────────────────────────────────────────
 function leesFormulier() {
-  const payload = { model: $("model").value, system_prompt: $("system_prompt").value };
+  const payload = {
+    provider: $("provider").value,
+    model: $("model").value,
+    gemini_model: $("gemini_model").value,
+    system_prompt: $("system_prompt").value,
+  };
   NUMERIEKE_VELDEN.forEach((k) => { payload[k] = $(k).value; });
   return payload;
 }
@@ -213,7 +256,7 @@ function renderResultaat(data) {
       </div>
       <div class="test-kolom">
         <div class="kop">Antwoord chatbot</div>
-        <div class="inhoud">${marked.parse(data.antwoord || "")}</div>
+        <div class="inhoud">${DOMPurify.sanitize(marked.parse(data.antwoord || ""))}</div>
       </div>
     </div>
     ${gemist}
