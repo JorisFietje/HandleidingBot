@@ -52,4 +52,5 @@ class Section:
     page: int | None = None
     end_page: int | None = None
     _tokens: set[str]     = field(default_factory=set, repr=False)
+    _taal: str            = field(default="onbekend", repr=False)
     _embedding: np.ndarray | None = field(default=None, repr=False)

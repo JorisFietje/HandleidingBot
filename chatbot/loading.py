@@ -12,7 +12,7 @@ import json
 import logging
 
 from .model import Section, MANUALS_DIR
-from .text import _keywords
+from .text import _keywords, _detect_language
 from .embeddings import _compute_embeddings
 from . import images
 
@@ -111,6 +111,7 @@ def load_manuals() -> dict[str, list[Section]]:
 
         for s in secties:
             s._tokens = _keywords(s.title + " " + s.content)
+            s._taal = _detect_language(s.content)
         handleidingen[naam] = secties
         logger.info("Geladen: %s (%d secties)", naam, len(secties))
 

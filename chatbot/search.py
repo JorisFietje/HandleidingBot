@@ -129,19 +129,24 @@ def search_sections(
                 opnieuw.append((score + boost, cos, s))
             gecombineerd = opnieuw
 
+        # Taalvoorkeur als zachte boost (geen harde filter). Secties in dezelfde taal
+        # als de vraag krijgen een klein zetje, zodat bij een handleiding met zowel
+        # NL- als EN-tekst de juiste taal voorgaat. Cruciaal: Engelstalige
+        # handleidingen worden NIET meer weggegooid bij een Nederlandse vraag — het
+        # multilinguale embeddingmodel matcht over talen heen, en de bot antwoordt in
+        # het Nederlands op basis van Engelse brontekst.
+        vraag_taal = _detect_language(vraag)
+        if vraag_taal != "onbekend":
+            gecombineerd = [
+                (score + (0.06 if getattr(s, "_taal", "onbekend") == vraag_taal else 0), cos, s)
+                for score, cos, s in gecombineerd
+            ]
+
         gecombineerd.sort(key=lambda x: x[0], reverse=True)
         # Drempel op hybride score zodat sterke fuzzy-matches de threshold kunnen halen
         inst = settings.get_settings()
         drempel = inst["drempel_filter"] if filter_names else inst["drempel_globaal"]
         kandidaten = [(score, cos, s) for score, cos, s in gecombineerd if score > drempel]
-
-        # taalfilter: prefereer secties in dezelfde taal als de vraag
-        vraag_taal = _detect_language(vraag)
-        if vraag_taal != "onbekend":
-            taal_match = [(sc, cos, s) for sc, cos, s in kandidaten
-                          if _detect_language(s.content) == vraag_taal]
-            if taal_match:
-                kandidaten = taal_match
 
         # dedupliceer: verwijder secties die te veel lijken op een eerder gekozen sectie
         resultaat: list[Section] = []
